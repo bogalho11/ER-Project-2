@@ -1,8 +1,8 @@
 ## Executive Summary
 ### User Perspective
-- 
+- This malware, disguised as a benign executable, compromises personal systems by performing a series of malicious actions without user consent pretending to be a simple game. Once executed, it attempts to detect if it is being analyzed or debugged using various anti-analysis techniques. If no analysis tools are detected, the malware activates its core functionalities: encrypting local files using AES-256 encryption and establishing a backdoor through port 1337. This allows an attacker to remotely execute arbitrary commands on the user's machine. Persistence is ensured via crontab modifications, and traces such as a `.note` file are left behind. The infection results in significant loss of control over the affected system and the potential exposure of personal data.
 ### Organization Perspective
-- 
+- This binary represents a serious threat to enterprise environments, combining ransomware functionality with botnet-like command-and-control capabilities. Upon execution, it employs anti-VM and anti-debugging checks to evade analysis. If no analysis environment is detected, it encrypts files system-wide using a hardcoded encryption key and establishes a persistent backdoor accessible via TCP port 1337. Through this backdoor, attackers can issue arbitrary system commands, potentially enabling lateral movement, data exfiltration, or deployment of additional payloads. The malware also manipulates scheduled tasks via crontab, ensuring repeated execution even after reboot. Key indicators of compromise include encrypted file extensions (`.enc`), crontab anomalies, and open communication on port 1337.
 
 - ## Background
 - **Date** - 01/05/2025
@@ -282,11 +282,18 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 		- If the content starts with a "d " it goes to the `download_http_url_with_curl()`
 		- If the content starts with a "c " it goes to the it executes the content received using the function `system()` directly in the host.
 - ![Backdoor Server Function](Images/backdoor_server_function.png)
-- The next function is `ransomware()`.
-	- as
+- The next function is `ramsomware()`.
+	- This a simple function, it decrypts a command, stores it in a buffer we called `cmd` and then executes it with the function `system()`.
 - ![Ransomware Function](Images/ransomware_function.png)
+- The following function is `download_http_url_with_curl()`
+	- This function simply constructs a string with the string `curl -o %s %s`, the variables `arg2` and `arg1 are renamed to `file_path`and `url`, since the first is where to store the output and the second the URL to where the request will be made.
+![Download HTTP URL with Curl Function](Images/download_http_url_with_curl_function.png)
 - The last function is the `install_program_to_crontab()`
-	- asas
+	- The functions starts off by reading the value of the file `proc/self/exe` which allows the binary to read its own binary code, due to this the variable `fp`was renamed to `exe`.
+	- Then, using the function `getenv("HOME")`, the binary obtains the path to the users home directory, which is stored on the variable `rax` which then is renamed to `home`.
+	- After obtaining the home directory, it decrypts the string `%s/.note` and creates the variable `var_238` which will be used as buffer by the function `snprintf` and so its renamed to `buff`.
+	- The second call to the function `decrypt`its for the string `crontab -l`, which is a command that displays the current crontab on standard output, this is used to see if the `~/.note` file is present in the output of the command `crontab -l`.
+	- The third call to decrypt is done to the string `crontab -e`, which edits the current crontab, this is done to add a new entry with the value `*/5 * * * * chmod ug+x %s && %s\n` , this is done to obtain persistence.
 ![Install Program to Crontab Function](Images/install_program_to_crontab_function.png)
 ## Demonstration
 - In the following video we demonstrate how it possible to connect to the user machine once the binary is running, in order to do this some changes and scripts were necessary:
@@ -299,27 +306,20 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 	- `rmdir a` to delete the directory just created.
 - Although this example doesn't cause any harm to the user, it allows us to see that with the connection open an attacker could do a lot of actions on the user's machine.
 - ![video](video/demonstration.mkv)
-- 
-
 ## Analysis Summary
-<font color="#ff0000">- **Key Host and Network Indicators of Compromise (IOCs):**</font>
-<font color="#ff0000">	- </font>
-<font color="#ff0000">- **Key Functionality:**</font>
-<font color="#ff0000">	- **Device Control & Persistence:** Locks the screen, gains admin privileges, disables security settings, controls UI interactions, and hides its icon to avoid detection.</font>
-<font color="#ff0000">	- **Data Theft:** Reads and intercepts SMS messages (including OTPs), accesses contacts and call logs, steals clipboard data, captures keystrokes (keylogging), and extracts cookies for session hijacking.    </font>
-<font color="#ff0000">	- **Remote Command Execution:** Connects to a command-and-control (C2) server, registers the device as a bot, receives and executes remote commands, and maintains persistent communication.</font>
-<font color="#ff0000">	- **Security Evasion:** Disables Google Play Protect, bypasses SSL certificate checks, manipulates system settings, and prevents uninstallation or factory resets.</font>
-<font color="#ff0000">    - **Financial & Fraud Capabilities:** Sends phishing messages, makes unauthorized calls, disables notifications, and locks the device remotely—potentially for extortion or fraud.</font>
-<font color="#ff0000">- **Malware Type and Family**</font>
-<font color="#ff0000">	- According to [VirusTotal](https://www.virustotal.com/gui/file/f35635ab05a8f0ff2e45a561e9aef6cb766fe62cd3216dc4ab5ca2425c58e1d7/community) this malware belongs to the Coper malware family.</font>
-<font color="#ff0000">- **Indicators of Compromise**</font>
-<font color="#ff0000">	- The first indicator of compromise is the [file hash](#static-analysis). Another indicator are the requests to the domains shown in the picture in [this section](#static-analysis), in the **Extenal Dependencies** subsection.</font>
+Key Host and Network Indicators of Compromise (IOCs):
+- Having the port 1337 open to communication or having communication on this port.
+- The content of the machine being encrypted.
+- The presence of a hidden file `.note`.
+- Strange crontab entries.
+- The presence of the encrypted strings.
+- By the file hashes
+**Key Functionality:
+- Encrypt the users machine.
+- Run commands on the users machine.
+**Malware Type and Family:**
+- **Bot/Agent malware** - This malware exhibits typical characteristics of a bot, including remote command execution capabilities, system encryption (ransomware-like behavior), and persistence via crontab modification. It waits for connections from a command-and-control (C2) server over port 1337, suggesting it may be part of a botnet infrastructure designed for control, exfiltration, or further malicious tasks.
 ## References
 - https://www.youtube.com/watch?v=0U19sVSLhQE
-- 
-
-## Notas
-- Verificar versão compilador
-- Colocar caminho para o scripts python 
-- Colocar video do acesso ao socket que a aplicação cria
-- Tratar da função download_http_curl
+- https://polyswarm.network 
+- https://github.com/webview/webview
