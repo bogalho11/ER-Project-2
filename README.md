@@ -2,13 +2,15 @@
 ### User Perspective
 - 
 ### Organization Perspective
+- 
+
 - ## Background
 - **Date** - 01/05/2025
 - **File Name** 
 	- game
-- **File Location** - <font color="#ff0000">[original](/original/deepseek/deepkseep.apk)</font>
+- **File Location** - [original](/binaries/game)
 ## Static Analysis
-- This was done on the files found in <font color="#ff0000">[static analysis folder](static_analysis/deepseek)</font>
+- This was done on the file found in [original](/binaries/game)
 - **File Hash** by VirusTotal
 	- **MD5** - 4ff726ba36974d7dcbd542a7d4b87b03 
 	- **SHA-1** - 3bc4b2d4e970288bbbf53e5a05b34073690a93c9
@@ -296,7 +298,8 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 	- `mkdir` which will allows us to see in the Visual Studio sidebar that the directory is created with the name "a".
 	- `rmdir a` to delete the directory just created.
 - Although this example doesn't cause any harm to the user, it allows us to see that with the connection open an attacker could do a lot of actions on the user's machine.
-- [video](video/2025-05-05 10-22-40.mkv)
+- ![video](video/demonstration.mkv)
+- 
 
 ## Analysis Summary
 <font color="#ff0000">- **Key Host and Network Indicators of Compromise (IOCs):**</font>
