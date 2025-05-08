@@ -39,7 +39,7 @@
 	- **Sections** : To verify some sections use the command ```strings game | grep -E "^\."```
 	- ![Images](sections.png)
 - **Entropy** by DetectItEasy
-	- ![Images](entropy.png)
+	- ![Entropy](Images/entropy.png)
 ## Behavioral Analysis
 ### Setup
 - In order to perform the dynamic analysis in a safe environment we created a QEMU virtual machine with Kali Linux.
@@ -219,7 +219,7 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 - The decompiled code analysis was mostly done with Binary Ninja, although when in doubt about the decompilation Ghidra was also used as a double check.
 - The presentation of the decompiled code will be constituted by two prints, the left one is the original one and the right one is the one where some symbols names were changed as well as types and definitions. Any modifications of the original code will be explained.
 - Initially we looked for the symbol `main()` since this is the function where everything starts.
--  ![Images](main_symbol.png)
+-  ![Main Symbol](Images/main_symbol.png)
 - The first function that was analysed, as mentioned previously was the `main()`.
 	- This function starts of by verifying the amount of arguments passed to itself(given by `argc`), this is a interesting case since the else condition will never happen since it is not possible to pass -1 arguments. In the if condition we find 2 functions that will be analysed later:
 		- `detect_debugger()`
@@ -231,17 +231,17 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 		- Initially `rax_11` that after analyzing the code becomes clear it represents the result of the function `detecte_vm`, so the name was updated to `running_in_a_vm`.
 		- Besides `rax_11` the same logic was applied to `tamper_1` and to `tamper` who were renamed to `being_debugged` and `debugged_or_vm`, respectively, due to the value of the first one being `OR` of the function `debugged_vm_with_msr` and the value of the variable `debugged_or_vm`, the second one is the `OR` between the value of `running_in_a_vm` and `being_debugged`.
 	- After this a library for webview was used, and in order to facilitate the comprehension we consulted the source code in the repository of the library (present in the references) and corrected the types, functions and arguments passed.
-- ![Images](main_function.png)
+- ![Main Function](Images/main_function.png)
 -  After the `main()` function we will analyze the functions as they appear, so the next one is `detect_debugger()`
 	- This functions starts of by calling the function `decrypt()` to decrypt the string, that will result in the value obtained with Qiling `/proc/self/status`, this is a file in the proc filesystem on Linux systems that provides detailed information about the current process, this allows to retrieve runtime characteristics about itself, which will be useful later on.
 	- After this, the file is read with the function `fopen()`, after this using `memset()` the buffer is overwritten with zeros, this is used to minimize the time which the string is decrypted.
 	- The program enters a loop until it finds the string "TracerPid:\t0" in `/proc/self/status`, which indicates that no debugger is attached to the process. 
 		- The TracerPid field is set to the PID of a tracing (debugging) process if one is present a value of `0` means the process is not being traced. 
-- ![images](detect_debugger_function.png)
+- ![Detect Debugger Function](Images/detect_debugger_function.png)
 - After verifying if it is running in a debugger is verifies if it is being emulated by Qiling with the function `detect_qiling()`.
 	- The functions operates off exactly like the previous one, decrypting a value that will result in `/proc/self/maps` and then opening the file, and searching for the value "1),).'" in the file.
 		- Although this functions always returns zero, which may indicate incorrect decompilation.
-- ![image](detect_qiling_function.png)
+- ![Detect Qiling Function](Images/detect_qiling_function.png)
 - The following function is `start_backdoor_server()`.
 	- The first alteration done on the function is in the arguments, the last two arguments were never used, so they were removed from the declaration.
 	- The name of the first argument is updated to `argc` and the type and name of the second argument was also updated to type `char **` and renamed to `argv` due to the arguments that are passed to this function when it is called in `main()`.
@@ -250,22 +250,22 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 	- The else case is just code without any sense.
 	- After the conditions, the programs sleeps for the physical address value in seconds, using the function `sleep()`.
 	- The variable `var_18` mas retyped to the type `pthread_t` since it is the first argument of the function `pthread_create` and rename to `thread`.
-- ![images](start_backdoor_server_function.png)
+- ![Start Backdoor Server Function](Images/start_backdoor_server_function.png)
 - The following function is `detect_vm_with_msr()`
 	- The functions starts of by reading the content of the file `/dev/cpu/0/msr`.
 	- Then using the function `pread()`it reads from the previous file 8 bytes from the offset 26. If the value the function `preads`returns is different from 8 then the function ends.
 		- Otherwise if the value read is smaller than 0x8000000 it returns 0 otherwise it returns 1.
-- ![images](detect_vm_with_msr_function.png)
+- ![Detect VM with MSR](Images/detect_vm_with_msr_function.png)
 - The next function is `detect_vm()`.
 	- Just like the functions `detect_debugger()` and `detect_qiling()` this function decrypts a string and then accesses the file the string contains, in this case is `/proc/cpuinfo` and then it searches for `hypervisor` if it finds it, then it returns the value 1, which means a virtual machine was detected otherwise it returns 0 that means no virtual machine was detected.
-- ![images](detect_vm_function.png)
+- ![Detect VM Function](Images/detect_vm_function.png)
 - The following function is `decrypt()` will have two prints, the first one extracted from Ghidra and the second one from Binary Ninja, this is done since the output of both is different, and in this case the Ghidra is much simpler.
 	- The first alteration was done to the function arguments, `arg1` was retyped to `char*` and renamed to `str` since the function receives a string and then the length which lead to the renaming of the variable `arg2`to `len`.
 	- The variable `rax_4` is then renamed to `pow_res`, since this is the result of the function `pow()`.
 	- Then a decryption cycle is done, where the value of the XOR operation between the character in the position `i` of the string `str` and the value of the sum of `pow_res` and `i`.
 	- After the cycle, it adds the null terminator to the string.
-- ![[decrypt_function_ghidra.png]]
-- ![images](decrypt_function_binaryninja.png)
+- ![Decrypt Function Ghidra](Images/decrypt_function_ghidra.png)
+- ![Decrypt Function Binary Ninja](Images/decrypt_function_binaryninja.png)
 - The following function is `backdoor_server()`, that is initiated in the previously explained function `start_backdoor_server()` in a new thread.
 	- On the function `socket()` we checked the documentation in order to understand what were the arguments being passed, which ended up being AF_INET, SOCK_STREAM and 0, which means it opens a TCP IPv4 socket.
 	- It then verifies if the file descriptor is bigger than 0 and if the overall application isn't being debugged or inside a virtual machine.
@@ -279,18 +279,18 @@ Decrypted string in main(): https://play.js13kgames.com/ninja-vs-evilcorp/
 		- If the content starts with a "e " it goes to the `ransomware()`function.
 		- If the content starts with a "d " it goes to the `download_http_url_with_curl()`
 		- If the content starts with a "c " it goes to the it executes the content received using the function `system()` directly in the host.
-- ![images](backdoor_server_function.png)
+- ![Backdoor Server Function](Images/backdoor_server_function.png)
 - The next function is `ransomware()`.
 	- as
-- ![images](ransomware_function.png)
+- ![Ransomware Function](Images/ransomware_function.png)
 - The last function is the `install_program_to_crontab()`
 	- asas
-![images](install_program_to_crontab_function.png)
+![Install Program to Crontab Function](Images/install_program_to_crontab_function.png)
 ## Demonstration
 - In the following video we demonstrate how it possible to connect to the user machine once the binary is running, in order to do this some changes and scripts were necessary:
-	- A patch was applied to the binary to swap the `sleep()` function call with some NOP operations, this was necessary since the value that the program would sleep could take some time.
+	- A patch was applied in Binary Ninja, to the original binary to swap the `sleep()` function call with some NOP operations, this was necessary since the value that the program would sleep could take some time.
 	- On the python script we have the function `encrypt()` this function just encrypts the commands the same way the program expects them, in the `main()` function, we simply connect to the socket available and continuously send commands. 
-![[backdoor_client.py image.png]]
+![Backdoor Script in Pythib](Images/backdoor_client.py.png)
 - After preparing the binary we start the video  by demonstrating that once the binary is executed a socket is open on port 1337 using the command `netstat -lntu`.
 - Once we see that the port is available we use the previous Python script to establish a connection and send some commands to the user machine namely:
 	- `mkdir` which will allows us to see in the Visual Studio sidebar that the directory is created with the name "a".
